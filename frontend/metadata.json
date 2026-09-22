@@ -1,0 +1,6 @@
+{
+  "name": "Health Assist AI",
+  "description": "An AI-powered healthcare information assistant providing general health guidance, conversation history, and nearby healthcare facility lookup.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

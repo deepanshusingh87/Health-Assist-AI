@@ -1,0 +1,32 @@
+# Environment variables / secrets
+.env
+*.env
+!.env.example
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# SQLite database
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+
+# Build files
+dist/
+build/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

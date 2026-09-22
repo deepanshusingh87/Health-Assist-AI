@@ -1,0 +1,34 @@
+# Flask Backend
+flask
+flask-cors
+werkzeug
+python-dotenv
+
+# Authentication
+pyjwt
+
+# HTTP / API
+requests
+
+# LangChain / RAG
+langchain
+langchain-core
+langchain-community
+langchain-text-splitters
+
+# Google Gemini
+langchain-google-genai
+google-genai
+
+# Pinecone Vector Database
+pinecone
+
+# PDF Processing
+pypdf
+
+# Embeddings / Utilities
+numpy
+
+# Database
+sqlalchemy
+flask-sqlalchemy
