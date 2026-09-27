@@ -24,13 +24,17 @@ import {
 
 export default function Navbar({
   onToggleSidebar,
-  isSidebarOpen
+  isSidebarOpen,
+  onSearchSubmit
 }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const [showProfileMenu, setShowProfileMenu] =
     useState(false);
+
+  const [searchText, setSearchText] =
+    useState('');
 
   const user = getCurrentUser();
 
@@ -40,7 +44,33 @@ export default function Navbar({
     navigate('/login');
   };
 
-  // Page title
+  const handleSearch = (event) => {
+    event.preventDefault();
+
+    const query = searchText.trim();
+
+    if (!query) {
+      return;
+    }
+
+    if (
+      location.pathname === '/chat' &&
+      onSearchSubmit
+    ) {
+      onSearchSubmit(query);
+      setSearchText('');
+      return;
+    }
+
+    navigate('/chat', {
+      state: {
+        searchQuery: query
+      }
+    });
+
+    setSearchText('');
+  };
+
   const getPageTitle = () => {
     switch (location.pathname) {
       case '/history':
@@ -57,11 +87,7 @@ export default function Navbar({
   return (
     <header className="relative z-30 flex h-[68px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
 
-      {/* Left Section */}
-
       <div className="flex min-w-0 items-center gap-3">
-
-        {/* Mobile Menu */}
 
         {onToggleSidebar && (
           <button
@@ -83,8 +109,6 @@ export default function Navbar({
           </button>
         )}
 
-        {/* Page Information */}
-
         <div className="min-w-0">
 
           <h1 className="truncate text-[15px] font-semibold text-slate-900 sm:text-base">
@@ -105,31 +129,32 @@ export default function Navbar({
 
       </div>
 
-
-      {/* Center Search */}
-
       <div className="mx-6 hidden max-w-md flex-1 md:block">
 
-        <div className="relative">
+        <form
+          onSubmit={handleSearch}
+          className="relative"
+        >
 
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
           <input
             type="text"
+            value={searchText}
+            onChange={(event) =>
+              setSearchText(
+                event.target.value
+              )
+            }
             placeholder="Search health topics..."
             className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-50"
           />
 
-        </div>
+        </form>
 
       </div>
 
-
-      {/* Right Section */}
-
       <div className="flex shrink-0 items-center gap-2">
-
-        {/* Knowledge Badge */}
 
         <div className="hidden items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 xl:flex">
 
@@ -140,9 +165,6 @@ export default function Navbar({
           </span>
 
         </div>
-
-
-        {/* Hospitals */}
 
         <Link
           to="/hospitals"
@@ -163,13 +185,7 @@ export default function Navbar({
 
         </Link>
 
-
-        {/* Divider */}
-
         <div className="hidden h-6 w-px bg-slate-200 sm:block" />
-
-
-        {/* User Profile */}
 
         <div className="relative">
 
@@ -187,16 +203,11 @@ export default function Navbar({
             }
           >
 
-            {/* Avatar */}
-
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-cyan-50 text-teal-700 ring-1 ring-teal-100">
 
               <User className="h-4 w-4" />
 
             </div>
-
-
-            {/* Name */}
 
             <div className="hidden max-w-[120px] text-left lg:block">
 
@@ -212,7 +223,6 @@ export default function Navbar({
 
             </div>
 
-
             <ChevronDown
               className={`hidden h-3.5 w-3.5 text-slate-400 transition-transform lg:block ${
                 showProfileMenu
@@ -223,13 +233,8 @@ export default function Navbar({
 
           </button>
 
-
-          {/* Dropdown */}
-
           {showProfileMenu && (
             <>
-
-              {/* Click Outside */}
 
               <div
                 className="fixed inset-0 z-10"
@@ -240,10 +245,7 @@ export default function Navbar({
                 }
               />
 
-
               <div className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
-
-                {/* User Details */}
 
                 <div className="border-b border-slate-100 px-4 py-3">
 
@@ -263,9 +265,6 @@ export default function Navbar({
 
                 </div>
 
-
-                {/* Navigation */}
-
                 <div className="p-1.5">
 
                   <Link
@@ -284,7 +283,6 @@ export default function Navbar({
 
                   </Link>
 
-
                   <Link
                     to="/hospitals"
                     onClick={() =>
@@ -302,9 +300,6 @@ export default function Navbar({
                   </Link>
 
                 </div>
-
-
-                {/* Logout */}
 
                 <div className="border-t border-slate-100 p-1.5">
 

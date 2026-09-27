@@ -42,7 +42,7 @@ export default function ChatBox({
         'Understand common symptoms and health conditions.',
       icon: Stethoscope,
       prompt:
-        'I want to understand a symptom or medical condition.'
+        'What are the symptoms of '
     },
     {
       title: 'Self-Care Advice',
@@ -50,7 +50,7 @@ export default function ChatBox({
         'Explore safe temporary self-care information.',
       icon: HeartPulse,
       prompt:
-        'What safe self-care steps can I take for common symptoms?'
+        'What can I do for '
     },
     {
       title: 'Prevention & Wellness',
@@ -58,7 +58,7 @@ export default function ChatBox({
         'Learn everyday habits that support better health.',
       icon: Heart,
       prompt:
-        'How can I improve my general health and wellness?'
+        'How can I prevent '
     },
     {
       title: 'When to See a Doctor',
@@ -66,7 +66,7 @@ export default function ChatBox({
         'Know when professional medical care may be needed.',
       icon: ShieldCheck,
       prompt:
-        'How do I know when a symptom needs medical attention?'
+        'When should I see a doctor for '
     }
   ];
 
@@ -124,13 +124,31 @@ export default function ChatBox({
 
   // Fill textarea from cards
   const handleSuggestionClick = (prompt) => {
-    setInputText(prompt);
-
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.style.height = 'auto';
+    
+    if (!prompt || isLoading) {
+      return;
     }
+    onSendMessage(prompt);
   };
+  const handleTopicClick = (prompt) => {
+    if (!prompt || isLoading) {
+      return;
+    }
+    setInputText(prompt);
+    setTimeout(() => {
+      if (textareaRef.current) {  
+        textareaRef.current.focus();
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height =`${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+        const length = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(
+          length,
+          length
+        );  
+      }
+    }, 0);
+  };      
+
 
   // Auto resize textarea
   const handleTextareaInput = (event) => {
@@ -368,7 +386,7 @@ export default function ChatBox({
                         key={item.title}
                         type="button"
                         onClick={() =>
-                          handleSuggestionClick(
+                          handleTopicClick(
                             item.prompt
                           )
                         }

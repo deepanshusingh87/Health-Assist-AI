@@ -365,6 +365,9 @@ export default function Chat() {
             isSidebarOpen={
               isSidebarOpen
             }
+            onSearchSubmit={
+              handleSendMessage
+            }  
           />
 
 

@@ -6,13 +6,15 @@ from pypdf import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pinecone import Pinecone
 
+
+
 load_dotenv()
 
-# -----------------------------------
-# Basic configuration
-# -----------------------------------
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
 
 PDF_FOLDER = os.path.join(
     BASE_DIR,
@@ -26,166 +28,230 @@ INDEX_NAME = os.getenv(
 )
 
 EMBEDDING_MODEL = "llama-text-embed-v2"
+
 BATCH_SIZE = 20
 
+# CATEGORY CONFIGURATION
 
-# -----------------------------------
-# PDF metadata configuration
-# -----------------------------------
+CATEGORY_CONFIG = {
 
-def get_pdf_metadata(pdf_filename):
+    "general": {
+        "category": "general",
+        "corpus_type": "medical_reference",
+        "priority": 1
+    },
 
-    filename = pdf_filename.lower()
+    "self_care": {
+        "category": "self_care",
+        "corpus_type": "supportive_care",
+        "priority": 3
+    },
 
-    # Self-care / temporary relief knowledge
-    if filename == "self_care_v3.pdf":
-        return {
-            "category": "self_care",
-            "corpus_type": "supportive_care",
-            "priority": 3
-        }
+    "emergency": {
+        "category": "emergency",
+        "corpus_type": "emergency_care",
+        "priority": 3
+    }
+}
 
-    # Emergency and first-aid knowledge
-    elif filename == "who_basic_emergency_care.pdf":
-        return {
-            "category": "emergency",
-            "corpus_type": "emergency_care",
-            "priority": 3
-        }
-
-    # General medical reference book
-    elif filename == "medical_book.pdf":
-        return {
-            "category": "general",
-            "corpus_type": "medical_reference",
-            "priority": 1
-        }
-
-    # Any future PDF
-    else:
-        return {
-            "category": "general",
-            "corpus_type": "medical_reference",
-            "priority": 1
-        }
-
-
-# -----------------------------------
-# Check PDF folder
-# -----------------------------------
+# CHECK MAIN PDF FOLDER
 
 if not os.path.exists(PDF_FOLDER):
+
     raise FileNotFoundError(
         f"PDF folder not found: {PDF_FOLDER}"
     )
 
-pdf_files = [
-    file
-    for file in os.listdir(PDF_FOLDER)
-    if file.lower().endswith(".pdf")
-]
+# FIND PDFs FROM CATEGORY FOLDERS
+
+
+pdf_files = []
+
+
+for folder_name, metadata in CATEGORY_CONFIG.items():
+
+    category_folder = os.path.join(
+        PDF_FOLDER,
+        folder_name
+    )
+
+    # Skip missing category folders
+    if not os.path.exists(category_folder):
+
+        print(
+            f"Warning: folder not found: "
+            f"{category_folder}"
+        )
+
+        continue
+
+
+    # Find PDFs inside category folder
+    for file in os.listdir(category_folder):
+
+        if not file.lower().endswith(".pdf"):
+            continue
+
+        full_path = os.path.join(
+            category_folder,
+            file
+        )
+
+        # Ignore folders accidentally matching .pdf
+        if not os.path.isfile(full_path):
+            continue
+
+        pdf_files.append({
+            "filename": file,
+            "path": full_path,
+            "folder": folder_name,
+            "category": metadata["category"],
+            "corpus_type": metadata["corpus_type"],
+            "priority": metadata["priority"]
+        })
+
+# CHECK IF ANY PDF WAS FOUND
 
 if not pdf_files:
+
     raise FileNotFoundError(
-        "No PDF files found in medical_pdfs folder."
+        "No PDF files found inside general, "
+        "self_care, or emergency folders."
     )
 
-print(f"PDF files found: {len(pdf_files)}")
+# DISPLAY DISCOVERED PDFs
 
-for file in pdf_files:
-    metadata = get_pdf_metadata(file)
+print("\n================================")
+print("MEDICAL PDFs FOUND")
+print("================================")
+
+print(
+    f"Total PDF files found: "
+    f"{len(pdf_files)}"
+)
+
+
+for pdf in pdf_files:
 
     print(
-        f"- {file} "
-        f"[category={metadata['category']}, "
-        f"priority={metadata['priority']}]"
+        f"- {pdf['filename']} "
+        f"[category={pdf['category']}, "
+        f"corpus_type={pdf['corpus_type']}, "
+        f"priority={pdf['priority']}]"
     )
 
-
-# -----------------------------------
-# Connect Pinecone
-# -----------------------------------
-
-api_key = os.getenv("PINECONE_API_KEY")
+# CONNECT TO PINECONE
+api_key = os.getenv(
+    "PINECONE_API_KEY"
+)
 
 if not api_key:
+
     raise ValueError(
         "PINECONE_API_KEY is missing from .env"
     )
+
 
 pc = Pinecone(
     api_key=api_key
 )
 
+
 index = pc.Index(
     INDEX_NAME
 )
 
-print("\nPinecone connected successfully!")
-print("Using index:", INDEX_NAME)
 
+print("\n================================")
+print("PINECONE CONNECTED")
+print("================================")
 
-# -----------------------------------
-# Text splitter
-# -----------------------------------
+print(
+    "Using index:",
+    INDEX_NAME
+)
+
+# TEXT SPLITTER
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=150
 )
 
+# PROCESS EVERY PDF
 
-# -----------------------------------
-# Process every PDF
-# -----------------------------------
+for pdf in pdf_files:
 
-for pdf_filename in pdf_files:
+    pdf_filename = pdf["filename"]
 
-    pdf_path = os.path.join(
-        PDF_FOLDER,
-        pdf_filename
-    )
+    pdf_path = pdf["path"]
 
-    # Get metadata for current PDF
-    pdf_metadata = get_pdf_metadata(
-        pdf_filename
-    )
+    category = pdf["category"]
+
+    corpus_type = pdf["corpus_type"]
+
+    priority = pdf["priority"]
+
 
     print("\n================================")
-    print("Processing:", pdf_filename)
+    print(
+        "Processing:",
+        pdf_filename
+    )
+
     print(
         "Category:",
-        pdf_metadata["category"]
+        category
     )
+
     print(
         "Corpus Type:",
-        pdf_metadata["corpus_type"]
+        corpus_type
     )
+
     print(
         "Priority:",
-        pdf_metadata["priority"]
+        priority
     )
+
     print("================================")
 
-    reader = PdfReader(
-        pdf_path
-    )
+    # OPEN PDF
+    try:
+
+        reader = PdfReader(
+            pdf_path
+        )
+
+    except Exception as e:
+
+        print(
+            f"Could not open PDF "
+            f"{pdf_filename}: {e}"
+        )
+
+        print(
+            f"Skipping: {pdf_filename}"
+        )
+
+        continue
+
 
     total_pages = len(
         reader.pages
     )
+
 
     print(
         "Total pages:",
         total_pages
     )
 
+
     chunks = []
 
-
-    # -----------------------------------
-    # Extract and split PDF text
-    # -----------------------------------
+    # EXTRACT TEXT PAGE BY PAGE
+  
 
     for page_number, page in enumerate(
         reader.pages
@@ -195,25 +261,49 @@ for pdf_filename in pdf_files:
 
             text = page.extract_text()
 
-            if not text or not text.strip():
+
+            # Skip blank pages
+            if (
+                not text
+                or not text.strip()
+            ):
+
                 continue
 
+
+            cleaned_text = text.strip()
+
+
+            # Split page text into chunks
             split_texts = (
                 text_splitter.split_text(
-                    text.strip()
+                    cleaned_text
                 )
             )
+
 
             for chunk_number, chunk_text in enumerate(
                 split_texts
             ):
 
+                if not chunk_text.strip():
+                    continue
+
+
                 chunks.append({
-                    "text": chunk_text,
-                    "page": page_number + 1,
-                    "chunk": chunk_number
+
+                    "text":
+                        chunk_text.strip(),
+
+                    "page":
+                        page_number + 1,
+
+                    "chunk":
+                        chunk_number
                 })
 
+
+            # Progress display
             if (
                 page_number + 1
             ) % 50 == 0:
@@ -224,13 +314,14 @@ for pdf_filename in pdf_files:
                     f"{total_pages} pages..."
                 )
 
+
         except Exception as e:
 
             print(
                 f"Could not process page "
                 f"{page_number + 1}: {e}"
             )
-
+    # CHUNK RESULT
 
     print(
         "Chunks created:",
@@ -238,22 +329,32 @@ for pdf_filename in pdf_files:
     )
 
 
-    # -----------------------------------
-    # Safe filename for vector IDs
-    # -----------------------------------
+    # If PDF produced no readable text
+    if not chunks:
+
+        print(
+            f"WARNING: No readable text found "
+            f"in {pdf_filename}."
+        )
+
+        print(
+            f"Skipping Pinecone upload for "
+            f"{pdf_filename}."
+        )
+
+        continue
+
+    # SAFE FILENAME FOR VECTOR IDs
 
     safe_filename = (
         os.path.splitext(
             pdf_filename
         )[0]
         .replace(" ", "_")
+        .replace("-", "_")
         .lower()
     )
-
-
-    # -----------------------------------
-    # Create embeddings and upload
-    # -----------------------------------
+    # CREATE EMBEDDINGS IN BATCHES
 
     for start in range(
         0,
@@ -262,34 +363,48 @@ for pdf_filename in pdf_files:
     ):
 
         batch = chunks[
-            start:start + BATCH_SIZE
+            start:
+            start + BATCH_SIZE
         ]
+
 
         batch_texts = [
+
             item["text"]
+
             for item in batch
         ]
+        # PINECONE HOSTED EMBEDDINGS
+       
 
+        try:
 
-        # -----------------------------------
-        # Pinecone hosted embeddings
-        # -----------------------------------
+            embeddings = pc.inference.embed(
 
-        embeddings = pc.inference.embed(
-            model=EMBEDDING_MODEL,
-            inputs=batch_texts,
-            parameters={
-                "input_type": "passage",
-                "truncate": "END"
-            }
-        )
+                model=EMBEDDING_MODEL,
 
+                inputs=batch_texts,
 
-        # -----------------------------------
-        # Prepare vectors
-        # -----------------------------------
+                parameters={
+                    "input_type": "passage",
+                    "truncate": "END"
+                }
+            )
+
+        except Exception as e:
+
+            print(
+                f"Embedding error for "
+                f"{pdf_filename}: {e}"
+            )
+
+            raise
+
+        # PREPARE VECTORS
+       
 
         vectors = []
+
 
         for item, embedding in zip(
             batch,
@@ -297,54 +412,73 @@ for pdf_filename in pdf_files:
         ):
 
             vector_id = (
+
                 f"{safe_filename}_"
+
                 f"page_{item['page']}_"
+
                 f"chunk_{item['chunk']}"
             )
 
-            vectors.append({
-                "id": vector_id,
 
-                "values": embedding.values,
+            vectors.append({
+
+                "id":
+                    vector_id,
+
+                "values":
+                    embedding.values,
 
                 "metadata": {
 
-                    # Actual medical text
-                    "text": item["text"],
+                    # Actual medical content
+                    "text":
+                        item["text"],
 
-                    # PDF information
-                    "source": pdf_filename,
-                    "page": item["page"],
-                    "chunk": item["chunk"],
+                    # Source document
+                    "source":
+                        pdf_filename,
 
-                    # Knowledge category
+                    # Source folder/category
+                    "source_folder":
+                        pdf["folder"],
+
+                    # Page/chunk location
+                    "page":
+                        item["page"],
+
+                    "chunk":
+                        item["chunk"],
+
+                    # RAG category
                     "category":
-                        pdf_metadata[
-                            "category"
-                        ],
+                        category,
 
-                    # Corpus type
+                    # Knowledge corpus type
                     "corpus_type":
-                        pdf_metadata[
-                            "corpus_type"
-                        ],
+                        corpus_type,
 
                     # Retrieval priority
                     "priority":
-                        pdf_metadata[
-                            "priority"
-                        ]
+                        priority
                 }
             })
+        # UPLOAD VECTORS TO PINECONE
 
+        try:
 
-        # -----------------------------------
-        # Upload to Pinecone
-        # -----------------------------------
+            index.upsert(
+                vectors=vectors
+            )
 
-        index.upsert(
-            vectors=vectors
-        )
+        except Exception as e:
+
+            print(
+                f"Pinecone upload error "
+                f"for {pdf_filename}: {e}"
+            )
+
+            raise
 
 
         completed = min(
@@ -352,38 +486,47 @@ for pdf_filename in pdf_files:
             len(chunks)
         )
 
+
         print(
             f"Uploaded "
             f"{completed}/"
             f"{len(chunks)} chunks"
         )
 
-        time.sleep(0.5)
+
+        time.sleep(
+            0.5
+        )
 
 
     print(
-        f"Completed: {pdf_filename}"
+        f"Completed: "
+        f"{pdf_filename}"
     )
 
-
-# -----------------------------------
-# Finished
-# -----------------------------------
+# FINISHED
 
 print("\n================================")
-print("ALL PDFs INGESTED SUCCESSFULLY!")
+print("ALL AVAILABLE PDFs PROCESSED!")
 print("================================")
 
 
 # Give Pinecone a moment to update stats
-time.sleep(2)
+time.sleep(
+    2
+)
+
+# PINECONE STATISTICS
+
+stats = (
+    index.describe_index_stats()
+)
 
 
-# -----------------------------------
-# Pinecone statistics
-# -----------------------------------
+print(
+    "\nPinecone Index Statistics:"
+)
 
-stats = index.describe_index_stats()
-
-print("\nPinecone Index Statistics:")
-print(stats)
+print(
+    stats
+)

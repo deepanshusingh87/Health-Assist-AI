@@ -46,34 +46,11 @@ index = pc.Index(
 
 def detect_query_type(question):
 
-    question_lower = question.lower()
-        
-    # Casual / non-medical conversation
-    
-    casual_phrases = [
-        "hello",
-        "hi",
-        "hey",
-        "good morning",
-        "good afternoon",
-        "good evening",
-        "how are you",
-        "how are you doing",
-        "how do you feel",
-        "how would you feel",
-        "how would you feel today",
-        "who are you",
-        "what can you do",
-        "thank you",
-        "thanks"
-    ]
-
-    if question_lower.strip() in casual_phrases:
-        return "non_medical"
+    question_lower = question.lower().strip()
 
     
     # Emergency indicators
-    
+    # ----------------------------------------------
 
     emergency_keywords = [
         "unconscious",
@@ -106,10 +83,9 @@ def detect_query_type(question):
         if keyword in question_lower:
             return "emergency"
 
-
-    # ----------------------------------------------
+    
     # Self-care / symptom-relief indicators
-    # ----------------------------------------------
+    
 
     self_care_keywords = [
         "what should i do",
@@ -158,12 +134,86 @@ def detect_query_type(question):
         if keyword in question_lower:
             return "self_care"
 
-    return "general"
+    
+    # General medical / health indicators
+    
+
+    medical_keywords = [
+        "health",
+        "medical",
+        "medicine",
+        "medication",
+        "drug",
+        "disease",
+        "disorder",
+        "condition",
+        "symptom",
+        "symptoms",
+        "diagnosis",
+        "treatment",
+        "doctor",
+        "hospital",
+        "infection",
+        "virus",
+        "bacteria",
+        "allergy",
+        "blood",
+        "blood pressure",
+        "sugar",
+        "glucose",
+        "diabetes",
+        "insulin",
+        "cancer",
+        "tumor",
+        "heart",
+        "kidney",
+        "liver",
+        "lung",
+        "brain",
+        "stomach",
+        "skin",
+        "bone",
+        "joint",
+        "muscle",
+        "nerve",
+        "eye",
+        "vision",
+        "ear",
+        "teeth",
+        "tooth",
+        "gum",
+        "ulcer",
+        "anemia",
+        "anaemia",
+        "cholesterol",
+        "thyroid",
+        "asthma",
+        "migraine",
+        "arthritis",
+        "hypertension",
+        "pregnancy",
+        "vitamin",
+        "nutrition",
+        "vaccine",
+        "vaccination",
+        "surgery",
+        "injury",
+        "swelling",
+        "rash",
+        "itching"
+    ]
+
+    for keyword in medical_keywords:
+        if keyword in question_lower:
+            return "general"
+
+    
+
+    return "non_medical"
 
 
-# --------------------------------------------------
 # Query One Pinecone Category
-# --------------------------------------------------
+
 
 def query_category(
     vector,
@@ -210,7 +260,7 @@ def retrieve_medical_context(question):
     matches = []
 
 
-    # --------------------------------------------------
+   
     # SELF-CARE QUESTION
     #
     # Main information:
@@ -219,7 +269,7 @@ def retrieve_medical_context(question):
     # Supporting information:
     # general medical book
     # emergency care
-    # --------------------------------------------------
+   
 
     if query_type == "self_care":
 
@@ -229,26 +279,7 @@ def retrieve_medical_context(question):
                 "self_care",
                 5
             )
-        )
-
-        matches.extend(
-            query_category(
-                vector,
-                "general",
-                2
-            )
-        )
-
-        matches.extend(
-            query_category(
-                vector,
-                "emergency",
-                1
-            )
-        )
-
-
-    # --------------------------------------------------
+        )   
     # EMERGENCY QUESTION
     #
     # Main information:
@@ -257,7 +288,7 @@ def retrieve_medical_context(question):
     # Supporting:
     # self-care corpus
     # general medical reference
-    # --------------------------------------------------
+    
 
     elif query_type == "emergency":
 
@@ -268,25 +299,7 @@ def retrieve_medical_context(question):
                 5
             )
         )
-
-        matches.extend(
-            query_category(
-                vector,
-                "self_care",
-                2
-            )
-        )
-
-        matches.extend(
-            query_category(
-                vector,
-                "general",
-                1
-            )
-        )
-
-
-    # --------------------------------------------------
+   
     # GENERAL MEDICAL QUESTION
     #
     # Main information:
@@ -294,7 +307,7 @@ def retrieve_medical_context(question):
     #
     # Supporting:
     # self-care corpus
-    # --------------------------------------------------
+    
 
     else:
 
@@ -305,31 +318,24 @@ def retrieve_medical_context(question):
                 5
             )
         )
-
-        matches.extend(
-            query_category(
-                vector,
-                "self_care",
-                2
-            )
-        )
-
-
-    # --------------------------------------------------
+   
     # Sort results by similarity score
-    # --------------------------------------------------
+    
 
     matches = sorted(
         matches,
         key=lambda match: match.score,
         reverse=True
     )
-
-
-    # --------------------------------------------------
+    MIN_RELEVANCE_SCORE = 0.35
+    matches = [
+        match
+        for match in matches
+        if match.score >= MIN_RELEVANCE_SCORE
+    ]    
+   
     # Remove duplicate chunks
-    # --------------------------------------------------
-
+    
     unique_matches = []
     seen_ids = set()
 
@@ -354,9 +360,9 @@ def retrieve_medical_context(question):
     sources = []
 
 
-    # --------------------------------------------------
+    
     # Build Context
-    # --------------------------------------------------
+    
 
     for match in unique_matches:
 
@@ -421,9 +427,9 @@ def retrieve_medical_context(question):
     )
 
 
-# --------------------------------------------------
+
 # Generate Medical Response
-# --------------------------------------------------
+
 
 def get_medical_response(question):
 
@@ -448,9 +454,9 @@ def get_medical_response(question):
             "GROQ_API_KEY is missing from .env"
         )
 
-    # --------------------------------------------------
+    
     # Retrieve RAG Context
-    # --------------------------------------------------
+    
 
     context, sources, query_type = (
         retrieve_medical_context(
