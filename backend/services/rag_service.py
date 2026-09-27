@@ -27,9 +27,9 @@ if not PINECONE_API_KEY:
     )
 
 
-# --------------------------------------------------
+
 # Pinecone Connection
-# --------------------------------------------------
+
 
 pc = Pinecone(
     api_key=PINECONE_API_KEY
@@ -40,17 +40,40 @@ index = pc.Index(
 )
 
 
-# --------------------------------------------------
+
 # Detect Question Type
-# --------------------------------------------------
+
 
 def detect_query_type(question):
 
     question_lower = question.lower()
+        
+    # Casual / non-medical conversation
+    
+    casual_phrases = [
+        "hello",
+        "hi",
+        "hey",
+        "good morning",
+        "good afternoon",
+        "good evening",
+        "how are you",
+        "how are you doing",
+        "how do you feel",
+        "how would you feel",
+        "how would you feel today",
+        "who are you",
+        "what can you do",
+        "thank you",
+        "thanks"
+    ]
 
-    # ----------------------------------------------
+    if question_lower.strip() in casual_phrases:
+        return "non_medical"
+
+    
     # Emergency indicators
-    # ----------------------------------------------
+    
 
     emergency_keywords = [
         "unconscious",
@@ -404,6 +427,18 @@ def retrieve_medical_context(question):
 
 def get_medical_response(question):
 
+    query_type = detect_query_type(question)
+
+    # Handle casual / non-medical conversation
+    # without searching Pinecone or showing sources
+    if query_type == "non_medical":
+        return (
+            "I don't have personal feelings, but I'm here and ready "
+            "to help with health-related questions. You can ask me "
+            "about symptoms, general health information, self-care, "
+            "or when to seek medical attention."
+        )
+
     groq_api_key = os.getenv(
         "GROQ_API_KEY"
     )
@@ -412,7 +447,6 @@ def get_medical_response(question):
         raise ValueError(
             "GROQ_API_KEY is missing from .env"
         )
-
 
     # --------------------------------------------------
     # Retrieve RAG Context

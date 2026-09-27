@@ -476,7 +476,7 @@ export async function resetForgotPassword(
       // Save normal login JWT
       localStorage.setItem(
         'healthAssistToken',
-        data.token
+        data.token 
       );
 
       // Save registered user
@@ -641,62 +641,8 @@ export async function resetForgotPassword(
 
       return data;
     }
-    /**
-    * 5. Delete conversation by ID
-    * Future Flask Endpoint: DELETE /api/history/:id
-    */
-    export async function deleteChat(conversationId) {
-      const token = localStorage.getItem('healthAssistToken');
-
-      if (!token) {
-        throw new Error('Please login first.');
-      }
-
-      const response = await fetch(
-        `${API_BASE_URL}/history/${conversationId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Unable to delete conversation.');
-      }
-
-      return data;
-    }
-    /**
-    * 5b. Clear all conversations
-    * Future Flask Endpoint: DELETE /api/history
-    */
-    export async function clearAllHistory() {
-      const token = localStorage.getItem('healthAssistToken');
-
-      if (!token) {
-        throw new Error('Please login first.');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/history`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Unable to clear chat history.');
-      }
-
-      return data;
-    }
-
+    
+    
     /**
     * Save or update a conversation in local history
     */
@@ -751,17 +697,32 @@ export async function resetForgotPassword(
     * Future Flask Endpoint: POST /api/feedback
     */
     export async function submitFeedback(messageId, rating) {
-      await delay(200);
+  const token = localStorage.getItem('token');
 
-      // Future Flask backend call:
-      // await fetch(`${API_BASE_URL}/feedback`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ message_id: messageId, rating }) // rating: 'helpful' | 'not_helpful'
-      // });
+  const response = await fetch(`${API_BASE_URL}/feedback`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && {
+        Authorization: `Bearer ${token}`
+      })
+    },
+    body: JSON.stringify({
+      messageId: messageId,
+      feedback: rating
+    })
+  });
 
-      return { success: true, messageId, rating };
-    }
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.error || 'Failed to submit feedback'
+    );
+  }
+
+  return data;
+}         
     export async function checkBackendHealth() {
       const response = await fetch(`${API_BASE_URL}/health`);
 
@@ -771,3 +732,53 @@ export async function resetForgotPassword(
 
       return await response.json();
     }
+    // Delete a single conversation
+    export async function deleteChat(conversationId) {
+      const token = localStorage.getItem('healthAssistToken');
+      const response = await fetch(
+        `${API_BASE_URL}/history/${conversationId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && {
+              Authorization: `Bearer ${token}`
+            })
+          }
+        }
+      );
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Failed to delete conversation'
+        );
+      }
+      return data;
+    }
+    
+    // Clear all chat history
+    export async function clearAllHistory() {
+      const token = localStorage.getItem('healthAssistToken');
+      const response = await fetch(`${API_BASE_URL}/history`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && {
+            Authorization: `Bearer ${token}`
+          })
+        }
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Failed to clear history'
+        );
+      }
+      return data;
+    }    
+
+      
+        
+            
